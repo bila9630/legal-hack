@@ -13,7 +13,12 @@ interface Clause {
     id: string;
     content: string;
     category: string;
-    importance: 'must-have' | 'optional' | 'red-flag';
+    classification?: 'fulfilled' | 'require_change' | 'law_department';
+    similarClause?: {
+        content: string;
+        source: string;
+        score: number;
+    } | null;
 }
 
 interface TempNDA {
@@ -60,12 +65,32 @@ export default function ViewPDFPage() {
                     filter: `temp_nda_id="${recordId}"`,
                     sort: '+created',
                 });
-                setClauses(clauseRecords.map((c: any) => ({
+                const initialClauses = clauseRecords.map((c: any) => ({
                     id: c.id,
                     content: c.content,
                     category: c.category,
-                    importance: c.importance,
-                })));
+                }));
+
+                // Classify clauses
+                try {
+                    const response = await fetch('/api/classify-clauses', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ clauses: initialClauses }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to classify clauses');
+                    }
+
+                    const data = await response.json();
+                    setClauses(data.classifiedClauses);
+                } catch (error) {
+                    console.error('Error classifying clauses:', error);
+                    setClauses(initialClauses);
+                }
             } catch (error) {
                 setHasError('Failed to load NDA or clauses.');
             } finally {
@@ -98,19 +123,6 @@ export default function ViewPDFPage() {
             .catch(() => setFile(null));
         return () => { isMounted = false; };
     }, [fileUrl, nda]);
-
-    const getBadgeProps = (importance: Clause['importance']): { variant: 'secondary' | 'destructive'; className: string } => {
-        switch (importance) {
-            case 'red-flag':
-                return { variant: 'destructive', className: '' };
-            case 'must-have':
-                return { variant: 'secondary', className: 'bg-green-500 text-white border-green-500' };
-            case 'optional':
-                return { variant: 'secondary', className: 'bg-yellow-400 text-black border-yellow-400' };
-            default:
-                return { variant: 'secondary', className: '' };
-        }
-    };
 
     if (isLoading) {
         return (
@@ -172,8 +184,34 @@ export default function ViewPDFPage() {
                                         <div key={clause.id} className="border rounded-lg p-4">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Badge variant="outline">{clause.category}</Badge>
+                                                {clause.classification && (
+                                                    <Badge variant={
+                                                        clause.classification === 'fulfilled' ? 'secondary' :
+                                                            clause.classification === 'require_change' ? 'destructive' :
+                                                                'default'
+                                                    }>
+                                                        {clause.classification}
+                                                    </Badge>
+                                                )}
                                             </div>
-                                            <p className="text-muted-foreground">{clause.content}</p>
+                                            <p className="text-muted-foreground mb-4">{clause.content}</p>
+
+                                            {clause.similarClause && (
+                                                <div className="mt-4 pt-4 border-t">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-medium">Similar Clause</span>
+                                                        <span className="text-sm text-muted-foreground">
+                                                            Score: {(clause.similarClause.score * 100).toFixed(1)}%
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground mb-2">
+                                                        {clause.similarClause.content}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Source: {clause.similarClause.source}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
