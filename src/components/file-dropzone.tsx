@@ -11,11 +11,31 @@ interface FileDropzoneProps {
     className?: string;
 }
 
-const FileDropzone: FC<FileDropzoneProps> = ({ files, setFiles, acceptedFileTypes, children, className }) => {
+const DEFAULT_ACCEPTED_TYPES: Accept = {
+    'application/pdf': ['.pdf'],
+    'application/msword': ['.doc'],
+    'application/vnd.ms-word': ['.doc'],
+    'application/x-msword': ['.doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'text/plain': ['.txt']
+};
+
+const FileDropzone: FC<FileDropzoneProps> = ({ 
+    files, 
+    setFiles, 
+    acceptedFileTypes = DEFAULT_ACCEPTED_TYPES, 
+    children, 
+    className 
+}) => {
     const onDrop = (acceptedFiles: File[]) => {
         // Only take the first file
         const newFile = acceptedFiles[0];
         if (newFile) {
+            console.log('Accepted file:', {
+                name: newFile.name,
+                type: newFile.type,
+                size: newFile.size
+            });
             setFiles([newFile]); // Replace existing files with new single file
         }
     };
@@ -23,7 +43,18 @@ const FileDropzone: FC<FileDropzoneProps> = ({ files, setFiles, acceptedFileType
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
         accept: acceptedFileTypes,
-        multiple: false // Set multiple to false to only allow single file
+        multiple: false, // Set multiple to false to only allow single file
+        validator: (file) => {
+            // Additional validation for file extensions
+            const ext = file.name.toLowerCase().split('.').pop();
+            if (ext === 'doc' || ext === 'docx' || ext === 'pdf' || ext === 'txt') {
+                return null; // File is valid
+            }
+            return {
+                code: 'file-invalid-type',
+                message: 'File type not supported'
+            };
+        }
     });
 
     return (

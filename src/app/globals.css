@@ -76,3 +76,114 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* DOCX Viewer Styles */
+.docx-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: white;
+  overflow: auto;
+}
+
+.docx-content {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  color: #333;
+}
+
+.docx-content .document-container {
+  padding: 2rem;
+  background: white;
+  min-height: 100%;
+}
+
+.docx-content .document {
+  width: 100%;
+  max-width: 816px; /* Roughly A4 width */
+  margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.docx-content h1 {
+  font-size: 2em;
+  margin: 1em 0;
+  font-weight: bold;
+  color: #111;
+}
+
+.docx-content h2 {
+  font-size: 1.5em;
+  margin: 0.83em 0;
+  font-weight: bold;
+  color: #111;
+}
+
+.docx-content h3 {
+  font-size: 1.17em;
+  margin: 1em 0;
+  font-weight: bold;
+  color: #111;
+}
+
+.docx-content p {
+  margin: 1em 0;
+  line-height: 1.6;
+}
+
+.docx-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  border: 1px solid #e2e8f0;
+}
+
+.docx-content th,
+.docx-content td {
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.docx-content th {
+  background-color: #f7fafc;
+  font-weight: 600;
+}
+
+.docx-content ul,
+.docx-content ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.docx-content li {
+  margin: 0.5em 0;
+}
+
+.docx-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 1em 0;
+}
+
+.docx-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.docx-content a:hover {
+  color: #1d4ed8;
+}
+
+.docx-content pre,
+.docx-content code {
+  background-color: #f1f5f9;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
