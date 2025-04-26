@@ -19,10 +19,15 @@ export default function ComparePage() {
         if (!files.length) return;
         setIsLoading(true);
         try {
+            const file = files[0];
+            const fileName = file.name.replace(/\.[^/.]+$/, "");
             const formData = new FormData();
-            formData.append('file', files[0]);
-            // You can add more fields if needed, e.g. name/type
-            await pb.collection('ndas').create(formData);
+            formData.append('file', file);
+            formData.append('type', 'nda');
+            formData.append('name', fileName);
+            const record = await pb.collection('ndas').create(formData);
+            const fileUrl = `https://hackathon24.pockethost.io/api/files/${record.collectionId}/${record.id}/${record.file}`;
+            console.log('File URL:', fileUrl);
             // Optionally, show success or reset state here
         } catch (error) {
             // Optionally, handle error here
