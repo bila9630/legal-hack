@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { convertToPdf } from '@/lib/document-converter';
+import { extname } from 'path';
 
 export async function POST(req: NextRequest) {
     try {
@@ -33,17 +34,20 @@ export async function POST(req: NextRequest) {
 
         // Process the file
         const fileBuffer = Buffer.from(await file.arrayBuffer());
+        const fileExtension = extname(file.name).toLowerCase();
         
         console.log('File buffer created:', {
             bufferSize: fileBuffer.length,
             fileName: file.name,
-            fileType: file.type
+            fileType: file.type,
+            fileExtension
         });
 
-        // Convert DOC/DOCX to PDF if necessary
+        // Convert DOC to PDF if necessary
         const pdfBuffer = await convertToPdf(fileBuffer, file.name);
         
-        if (!pdfBuffer) {
+        // If the file is not supported (not PDF, DOC, or DOCX)
+        if (fileExtension !== '.pdf' && fileExtension !== '.doc' && fileExtension !== '.docx') {
             return NextResponse.json(
                 { 
                     error: 'Unsupported file format',
@@ -57,30 +61,59 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        console.log('File processed successfully:', {
+        // If conversion was performed (for DOC files)
+        if (pdfBuffer) {
+            console.log('DOC file converted to PDF successfully:', {
+                originalName: file.name,
+                originalType: file.type,
+                pdfSize: pdfBuffer.length,
+                finalType: 'application/pdf'
+            });
+
+            // Convert the buffer to base64 for transmission
+            const base64Pdf = pdfBuffer.toString('base64');
+
+            // Return success response with the converted PDF data
+            return NextResponse.json({
+                fileUrl: `/uploads/${name}`,
+                message: 'File converted and processed successfully',
+                details: {
+                    originalName: file.name,
+                    originalType: file.type,
+                    size: pdfBuffer.length,
+                    type: 'application/pdf'
+                },
+                convertedFile: {
+                    data: base64Pdf,
+                    type: 'application/pdf',
+                    name: file.name.replace(/\.doc$/i, '.pdf')
+                }
+            });
+        }
+
+        // For PDF and DOCX files that don't need conversion
+        console.log('File processed without conversion:', {
             originalName: file.name,
             originalType: file.type,
-            pdfSize: pdfBuffer.length,
-            finalType: 'application/pdf'
+            size: fileBuffer.length
         });
 
-        // Convert the buffer to base64 for transmission
-        const base64Pdf = pdfBuffer.toString('base64');
+        // Convert the original file to base64
+        const base64Data = fileBuffer.toString('base64');
 
-        // Return success response with the converted PDF data
         return NextResponse.json({
             fileUrl: `/uploads/${name}`,
             message: 'File processed successfully',
             details: {
                 originalName: file.name,
                 originalType: file.type,
-                size: pdfBuffer.length,
-                type: 'application/pdf'
+                size: fileBuffer.length,
+                type: file.type
             },
             convertedFile: {
-                data: base64Pdf,
-                type: 'application/pdf',
-                name: file.name.replace(/\.(doc|docx)$/i, '.pdf')
+                data: base64Data,
+                type: file.type,
+                name: file.name
             }
         });
     } catch (error) {

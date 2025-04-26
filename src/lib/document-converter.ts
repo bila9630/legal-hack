@@ -14,14 +14,14 @@ export async function convertToPdf(buffer: Buffer, originalFilename: string): Pr
         mimeStart: buffer.slice(0, 20).toString('hex') // Log start of file for mime type checking
     });
     
-    // If it's already a PDF, return the buffer as is
-    if (ext === '.pdf') {
-        console.log('File is already PDF, returning as is');
-        return buffer;
+    // If it's already a PDF or DOCX, return null to indicate no conversion needed
+    if (ext === '.pdf' || ext === '.docx') {
+        console.log('File is PDF or DOCX, no conversion needed');
+        return null;
     }
     
-    // Only convert doc and docx files
-    if (ext !== '.doc' && ext !== '.docx') {
+    // Only convert doc files
+    if (ext !== '.doc') {
         console.log('Unsupported file extension:', ext);
         return null;
     }
