@@ -6,7 +6,7 @@ import React from 'react'
 
 export default function InnerLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="hidden flex-col md:flex">
+        <div className="flex flex-col min-h-screen">
             <div className="border-b">
                 <div className="flex h-16 items-center px-4">
                     <MainNav className="mx-6" />
@@ -15,7 +15,9 @@ export default function InnerLayout({ children }: { children: React.ReactNode })
                     </div>
                 </div>
             </div>
-            {children}
+            <div className="flex-1">
+                {children}
+            </div>
         </div>
     )
 }

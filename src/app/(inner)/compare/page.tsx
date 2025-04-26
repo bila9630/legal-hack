@@ -34,6 +34,8 @@ export default function ComparePage() {
     const [open, setOpen] = useState(false);
     const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
     const [inputType, setInputType] = useState<'file' | 'text'>('file');
+    const [error, setError] = useState<string | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
 
     const removeFile = (fileToRemove: File) => {
         setFiles(files.filter((file) => file !== fileToRemove));
@@ -70,54 +72,53 @@ export default function ComparePage() {
     const handleCompare = async () => {
         if ((!files.length && !freeText) || !selectedDocs.length) return;
         setIsLoading(true);
+        setError(null);
+        
         try {
-            const file = files[0];
-            const fileName = file.name.replace(/\.[^/.]+$/, "");
-            const formData = new FormData();
-<<<<<<< HEAD
+            let fileToProcess: File;
             
             if (inputType === 'file' && files[0]) {
-                // Store the file in sessionStorage
-                const fileReader = new FileReader();
-                fileReader.onload = () => {
-                    const arrayBuffer = fileReader.result as ArrayBuffer;
-                    const fileData = {
-                        name: files[0].name,
-                        type: files[0].type,
-                        data: Array.from(new Uint8Array(arrayBuffer))
-                    };
-                    sessionStorage.setItem('documentFile', JSON.stringify(fileData));
-                    router.push('/view-pdf');
-                };
-                fileReader.readAsArrayBuffer(files[0]);
+                fileToProcess = files[0];
             } else if (inputType === 'text' && freeText) {
-                // Create a text file from the free text
                 const blob = new Blob([freeText], { type: 'text/plain' });
-                const file = new File([blob], 'input.txt', { type: 'text/plain' });
-                const fileReader = new FileReader();
-                fileReader.onload = () => {
-                    const arrayBuffer = fileReader.result as ArrayBuffer;
-                    const fileData = {
-                        name: 'input.txt',
-                        type: 'text/plain',
-                        data: Array.from(new Uint8Array(arrayBuffer))
-                    };
-                    sessionStorage.setItem('documentFile', JSON.stringify(fileData));
-                    router.push('/view-pdf');
-                };
-                fileReader.readAsArrayBuffer(file);
+                fileToProcess = new File([blob], 'input.txt', { type: 'text/plain' });
+            } else {
+                throw new Error('No valid input provided');
             }
-=======
-            formData.append('file', file);
+
+            // First store the file in sessionStorage
+            const arrayBuffer = await fileToProcess.arrayBuffer();
+            const fileData = {
+                name: fileToProcess.name,
+                type: fileToProcess.type,
+                data: Array.from(new Uint8Array(arrayBuffer))
+            };
+            sessionStorage.setItem('documentFile', JSON.stringify(fileData));
+
+            // Then upload the file
+            const formData = new FormData();
+            formData.append('file', fileToProcess);
             formData.append('type', 'nda');
-            formData.append('name', fileName);
-            const record = await pb.collection('ndas').create(formData);
-            const fileUrl = `https://hackathon24.pockethost.io/api/files/${record.collectionId}/${record.id}/${record.file}`;
-            console.log('File URL:', fileUrl);
-            // Optionally, show success or reset state here
->>>>>>> a8d5a9fe53f4afe3b0fbc75e25104c29cb57e806
+            formData.append('name', fileToProcess.name.replace(/\.[^/.]+$/, ""));
+
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(responseData.error || 'Upload failed');
+            }
+
+            // If everything is successful, navigate to the view page
+            router.push('/view-pdf');
         } catch (error) {
-            console.error('Upload failed:', error);
+            console.error('Processing failed:', error);
+            setError(error instanceof Error ? error.message : 'Failed to process file');
+            // Remove the stored file if upload failed
+            sessionStorage.removeItem('documentFile');
         } finally {
             setIsLoading(false);
         }
@@ -135,112 +136,128 @@ export default function ComparePage() {
     };
 
     return (
-        <div className="max-w-md mx-auto mt-10">
-            <Tabs defaultValue="file" className="w-full" onValueChange={(value) => setInputType(value as 'file' | 'text')}>
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="file" className="flex items-center gap-2">
-                        <FileIcon className="w-4 h-4" />
-                        Upload File
-                    </TabsTrigger>
-                    <TabsTrigger value="text" className="flex items-center gap-2">
-                        <Type className="w-4 h-4" />
-                        Enter Text
-                    </TabsTrigger>
-                </TabsList>
+        <div className="container mx-auto px-4 py-8">
+            <div className="max-w-2xl mx-auto space-y-6">
+                {error && (
+                    <div className="p-4 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm">
+                        {error}
+                    </div>
+                )}
+                <Tabs defaultValue="file" className="w-full" onValueChange={(value) => {
+                    setInputType(value as 'file' | 'text');
+                    setError(null);
+                }}>
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                        <TabsTrigger value="file" className="flex items-center gap-2">
+                            <FileIcon className="w-4 h-4" />
+                            Upload File
+                        </TabsTrigger>
+                        <TabsTrigger value="text" className="flex items-center gap-2">
+                            <Type className="w-4 h-4" />
+                            Enter Text
+                        </TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="file">
-                    <Label htmlFor="file" className="mb-2 block text-sm text-white">File</Label>
-                    {files.length > 0 ? (
-                        <div className="rounded-lg border border-gray-300 bg-black/80 p-4">
-                            <div className="flex items-center justify-between rounded bg-gray-900/80 p-2">
-                                <div className="mr-2 flex min-w-0 flex-1 items-center">
-                                    <FileText className="mr-2 h-5 w-5 text-blue-400" />
-                                    <p className="truncate text-sm text-gray-200">{files[0].name}</p>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="shrink-0"
-                                    onClick={() => removeFile(files[0])}
-                                >
-                                    <X className="h-4 w-4 text-red-400" />
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <FileDropzone
-                            files={files}
-                            setFiles={setFiles}
-                            className="rounded-lg border-2 border-dashed border-gray-300 h-48 p-10 bg-black/80 hover:bg-black/60 transition-colors duration-150 flex items-center justify-center"
-                        >
-                            <div className="text-center">
-                                <p className="text-sm text-gray-400">
-                                    Drag and drop files here, or click to select files
-                                </p>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    Supported formats: PDF, DOCX, DOC, TXT
-                                </p>
-                            </div>
-                        </FileDropzone>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="text">
-                    <Label htmlFor="text" className="mb-2 block text-sm text-white">Text Input</Label>
-                    <Textarea
-                        id="text"
-                        value={freeText}
-                        onChange={(e) => setFreeText(e.target.value)}
-                        placeholder="Enter your text here..."
-                        className="min-h-[200px] bg-black/80 border-gray-300"
-                    />
-                </TabsContent>
-            </Tabs>
-
-            <div className="flex gap-2 mt-6">
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={open}
-                            className="w-full justify-between"
-                        >
-                            {getButtonText()}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                        <Command>
-                            <CommandEmpty>No documents found.</CommandEmpty>
-                            <CommandGroup>
-                                {DOCUMENTS.map((doc) => (
-                                    <CommandItem
-                                        key={doc.id}
-                                        value={doc.id}
-                                        onSelect={() => toggleDocument(doc.id)}
+                    <TabsContent value="file" className="mt-0">
+                        <Label htmlFor="file" className="mb-2 block text-sm">File</Label>
+                        {files.length > 0 ? (
+                            <div className="rounded-lg border bg-card p-4">
+                                <div className="flex items-center justify-between rounded bg-muted p-2">
+                                    <div className="mr-2 flex min-w-0 flex-1 items-center">
+                                        <FileText className="mr-2 h-5 w-5 text-primary" />
+                                        <p className="truncate text-sm">{files[0].name}</p>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="shrink-0"
+                                        onClick={() => removeFile(files[0])}
                                     >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                selectedDocs.includes(doc.id) ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                        {doc.label}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+                                        <X className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <FileDropzone
+                                files={files}
+                                setFiles={setFiles}
+                                className="rounded-lg border-2 border-dashed border-muted h-48 p-10 bg-card hover:bg-accent/50 transition-colors duration-150 flex items-center justify-center"
+                            >
+                                <div className="text-center">
+                                    <p className="text-sm text-muted-foreground">
+                                        Drop your PDF file here or click to browse
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Supported format: PDF
+                                    </p>
+                                </div>
+                            </FileDropzone>
+                        )}
+                    </TabsContent>
 
-                <Button
-                    className="shrink-0"
-                    disabled={isLoading || (files.length === 0 && !freeText) || selectedDocs.length === 0}
-                    onClick={handleCompare}
-                >
-                    {isLoading ? 'Processing...' : 'Compare'}
-                </Button>
+                    <TabsContent value="text" className="mt-0">
+                        <Label htmlFor="text" className="mb-2 block text-sm">Text Input</Label>
+                        <Textarea
+                            placeholder="Enter your text here..."
+                            value={freeText}
+                            onChange={(e) => setFreeText(e.target.value)}
+                            className="min-h-[200px] resize-none"
+                        />
+                    </TabsContent>
+                </Tabs>
+
+                <div className="space-y-4">
+                    <Label className="text-sm">Compare with</Label>
+                    <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={open}
+                                className="w-full justify-between"
+                            >
+                                {getButtonText()}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                            <Command>
+                                <CommandEmpty>No documents found.</CommandEmpty>
+                                <CommandGroup>
+                                    {DOCUMENTS.map((doc) => (
+                                        <CommandItem
+                                            key={doc.id}
+                                            onSelect={() => toggleDocument(doc.id)}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    selectedDocs.includes(doc.id) ? "opacity-100" : "opacity-0"
+                                                )}
+                                            />
+                                            {doc.label}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+
+                    <Button
+                        className="w-full"
+                        onClick={handleCompare}
+                        disabled={isLoading || (!files.length && !freeText) || !selectedDocs.length}
+                    >
+                        {isLoading ? (
+                            <>
+                                <span className="animate-spin mr-2">⏳</span>
+                                Processing...
+                            </>
+                        ) : (
+                            "Compare Documents"
+                        )}
+                    </Button>
+                </div>
             </div>
         </div>
     );
