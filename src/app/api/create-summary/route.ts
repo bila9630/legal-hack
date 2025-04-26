@@ -12,7 +12,7 @@ import { pb } from '@/lib/pocketbase';
 const clauseSchema = z.object({
     category: z.string(),
     content: z.string(),
-    importance: z.enum(['high', 'medium', 'low'])
+    importance: z.enum(['must-have', 'optional', 'red-flag'])
 });
 
 export async function POST(request: Request) {

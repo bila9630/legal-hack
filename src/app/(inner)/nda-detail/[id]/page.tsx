@@ -12,7 +12,7 @@ interface Clause {
     id: string;
     content: string;
     category: string;
-    importance: 'high' | 'medium' | 'low';
+    importance: 'must-have' | 'optional' | 'red-flag';
 }
 
 interface NDA {
@@ -26,10 +26,12 @@ interface NDA {
 
 const importanceOptions = [
     { label: 'All', value: 'all' },
-    { label: 'High', value: 'high' },
-    { label: 'Medium', value: 'medium' },
-    { label: 'Low', value: 'low' },
+    { label: 'Must-have', value: 'must-have' },
+    { label: 'Optional', value: 'optional' },
+    { label: 'Red-flag', value: 'red-flag' },
 ];
+
+type Importance = 'all' | 'must-have' | 'optional' | 'red-flag';
 
 export default function NDADetailPage() {
     const params = useParams();
@@ -37,7 +39,7 @@ export default function NDADetailPage() {
     const [clauses, setClauses] = useState<Clause[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [filterImportance, setFilterImportance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+    const [filterImportance, setFilterImportance] = useState<Importance>('all');
     const [file, setFile] = useState<File | null>(null);
 
     useEffect(() => {
@@ -85,6 +87,19 @@ export default function NDADetailPage() {
         ? clauses
         : clauses.filter((clause) => clause.importance === filterImportance);
 
+    const getBadgeProps = (importance: Clause['importance']): { variant: 'secondary' | 'destructive'; className: string } => {
+        switch (importance) {
+            case 'red-flag':
+                return { variant: 'destructive', className: '' };
+            case 'must-have':
+                return { variant: 'secondary', className: 'bg-green-500 text-white border-green-500' };
+            case 'optional':
+                return { variant: 'secondary', className: 'bg-yellow-400 text-black border-yellow-400' };
+            default:
+                return { variant: 'secondary', className: '' };
+        }
+    };
+
     if (!params.id) {
         return <div className="p-4">No NDA selected</div>;
     }
@@ -128,7 +143,7 @@ export default function NDADetailPage() {
                                         key={option.value}
                                         variant={filterImportance === option.value ? "default" : "outline"}
                                         size="sm"
-                                        onClick={() => setFilterImportance(option.value as any)}
+                                        onClick={() => setFilterImportance(option.value as Importance)}
                                         type="button"
                                     >
                                         {option.label}
@@ -141,28 +156,20 @@ export default function NDADetailPage() {
                                 <div className="text-center text-muted-foreground py-4">No clauses found</div>
                             ) : (
                                 <div className="space-y-6">
-                                    {filteredClauses.map((clause) => (
-                                        <div key={clause.id} className="border rounded-lg p-4">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Badge variant="outline">{clause.category}</Badge>
-                                                <Badge
-                                                    variant={
-                                                        clause.importance === 'high'
-                                                            ? 'destructive'
-                                                            : 'secondary'
-                                                    }
-                                                    className={
-                                                        clause.importance === 'medium'
-                                                            ? 'bg-yellow-400 text-black border-yellow-400'
-                                                            : ''
-                                                    }
-                                                >
-                                                    {clause.importance}
-                                                </Badge>
+                                    {filteredClauses.map((clause) => {
+                                        const badgeProps = getBadgeProps(clause.importance);
+                                        return (
+                                            <div key={clause.id} className="border rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Badge variant="outline">{clause.category}</Badge>
+                                                    <Badge variant={badgeProps.variant} className={badgeProps.className}>
+                                                        {clause.importance}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-muted-foreground">{clause.content}</p>
                                             </div>
-                                            <p className="text-muted-foreground">{clause.content}</p>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </CardContent>
