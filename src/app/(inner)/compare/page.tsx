@@ -96,10 +96,10 @@ export default function ComparePage() {
         if ((!files.length && !freeText) || !selectedDocs.length) return;
         setIsLoading(true);
         setError(null);
-        
+
         try {
             let fileToProcess: File;
-            
+
             if (inputType === 'file' && files[0]) {
                 fileToProcess = files[0];
             } else if (inputType === 'text' && freeText) {
@@ -136,32 +136,61 @@ export default function ComparePage() {
                 }
                 const blob = new Blob([bytes], { type });
                 const convertedFile = new File([blob], name, { type });
-                
-                // Store the converted file
+
                 const fileData = {
                     name: convertedFile.name,
                     type: convertedFile.type,
                     data: Array.from(bytes)
                 };
-                sessionStorage.setItem('documentFile', JSON.stringify(fileData));
+
+                // Send file data to get-clauses endpoint
+                const clausesResponse = await fetch('/api/get-clauses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fileData }),
+                });
+
+                if (!clausesResponse.ok) {
+                    const errorData = await clausesResponse.json();
+                    throw new Error(errorData.error || 'Failed to process clauses');
+                }
+
+                const clausesData = await clausesResponse.json();
+                if (!clausesData.recordId) throw new Error('No recordId returned');
+                router.push(`/view-pdf?recordId=${clausesData.recordId}`);
+                return;
             } else {
-                // Store the original file if no conversion was needed
                 const arrayBuffer = await fileToProcess.arrayBuffer();
                 const fileData = {
                     name: fileToProcess.name,
                     type: fileToProcess.type,
                     data: Array.from(new Uint8Array(arrayBuffer))
                 };
-                sessionStorage.setItem('documentFile', JSON.stringify(fileData));
-            }
 
-            // If everything is successful, navigate to the view page
-            router.push('/view-pdf');
+                // Send file data to get-clauses endpoint
+                const clausesResponse = await fetch('/api/get-clauses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fileData }),
+                });
+
+                if (!clausesResponse.ok) {
+                    const errorData = await clausesResponse.json();
+                    throw new Error(errorData.error || 'Failed to process clauses');
+                }
+
+                const clausesData = await clausesResponse.json();
+                if (!clausesData.recordId) throw new Error('No recordId returned');
+                router.push(`/view-pdf?recordId=${clausesData.recordId}`);
+                return;
+            }
         } catch (error) {
             console.error('Processing failed:', error);
             setError(error instanceof Error ? error.message : 'Failed to process file');
-            // Remove the stored file if upload failed
-            sessionStorage.removeItem('documentFile');
         } finally {
             setIsLoading(false);
         }
