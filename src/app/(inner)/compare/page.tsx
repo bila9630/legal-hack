@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import FileDropzone from "@/components/file-dropzone";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ const DOCUMENTS = [
 ];
 
 export default function ComparePage() {
+    const router = useRouter();
     const [files, setFiles] = useState<File[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -71,8 +73,20 @@ export default function ComparePage() {
             const formData = new FormData();
             formData.append('file', files[0]);
             formData.append('compareWith', JSON.stringify(selectedDocs));
-            await pb.collection('ndas').create(formData);
-            // Optionally, show success message here
+            
+            // Store the file in sessionStorage
+            const fileReader = new FileReader();
+            fileReader.onload = () => {
+                const arrayBuffer = fileReader.result as ArrayBuffer;
+                const fileData = {
+                    name: files[0].name,
+                    type: files[0].type,
+                    data: Array.from(new Uint8Array(arrayBuffer))
+                };
+                sessionStorage.setItem('pdfFile', JSON.stringify(fileData));
+                router.push('/view-pdf');
+            };
+            fileReader.readAsArrayBuffer(files[0]);
         } catch (error) {
             console.error('Upload failed:', error);
             // Optionally, show error message here
@@ -135,7 +149,6 @@ export default function ComparePage() {
                             role="combobox"
                             aria-expanded={open}
                             className="w-full justify-between"
-                            disabled={files.length === 0}
                         >
                             {getButtonText()}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
