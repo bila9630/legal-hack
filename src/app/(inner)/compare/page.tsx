@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import FileDropzone from "@/components/file-dropzone";
 import { Button } from "@/components/ui/button";
@@ -17,14 +17,12 @@ import { Command, CommandEmpty, CommandGroup, CommandItem } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 
-// Placeholder documents (replace with actual uploaded documents later)
-const DOCUMENTS = [
-    { id: "all", label: "Compare to All" },
-    { id: "nda1_1", label: "nda1_1.PDF" },
-    { id: "nda1_2", label: "nda1_2.PDF" },
-    { id: "nda1_3", label: "nda1_3.PDF" },
-    { id: "nda1_4", label: "nda1_4.PDF" },
-];
+interface Document {
+    id: string;
+    label: string;
+    collectionId?: string;
+    file?: string;
+}
 
 export default function ComparePage() {
     const router = useRouter();
@@ -36,6 +34,31 @@ export default function ComparePage() {
     const [inputType, setInputType] = useState<'file' | 'text'>('file');
     const [error, setError] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [documents, setDocuments] = useState<Document[]>([
+        { id: "all", label: "Compare to All" }
+    ]);
+
+    useEffect(() => {
+        const fetchDocuments = async () => {
+            try {
+                const records = await pb.collection('ndas').getFullList({
+                    sort: '-created',
+                });
+                const docs = records.map(record => ({
+                    id: record.id,
+                    label: record.name || record.file,
+                    collectionId: record.collectionId,
+                    file: record.file
+                }));
+                setDocuments([{ id: "all", label: "Compare to All" }, ...docs]);
+            } catch (error) {
+                console.error('Error fetching documents:', error);
+                setError('Failed to fetch documents');
+            }
+        };
+
+        fetchDocuments();
+    }, []);
 
     const removeFile = (fileToRemove: File) => {
         setFiles(files.filter((file) => file !== fileToRemove));
@@ -46,7 +69,7 @@ export default function ComparePage() {
             if (selectedDocs.includes("all")) {
                 setSelectedDocs([]);
             } else {
-                setSelectedDocs(DOCUMENTS.map(doc => doc.id));
+                setSelectedDocs(documents.map(doc => doc.id));
             }
             return;
         }
@@ -56,7 +79,7 @@ export default function ComparePage() {
                 ? prev.filter(id => id !== docId)
                 : [...prev, docId];
 
-            const allDocsExceptAll = DOCUMENTS.filter(doc => doc.id !== "all").map(doc => doc.id);
+            const allDocsExceptAll = documents.filter(doc => doc.id !== "all").map(doc => doc.id);
             const allIndividualDocsSelected = allDocsExceptAll.every(id => newSelection.includes(id));
 
             if (allIndividualDocsSelected && !newSelection.includes("all")) {
@@ -148,7 +171,7 @@ export default function ComparePage() {
         if (selectedDocs.length === 0) {
             return "Select documents to compare";
         } else if (selectedDocs.length === 1) {
-            const selectedDoc = DOCUMENTS.find(doc => doc.id === selectedDocs[0]);
+            const selectedDoc = documents.find(doc => doc.id === selectedDocs[0]);
             return `Compare to ${selectedDoc?.label || ''}`;
         } else {
             return `${selectedDocs.length} documents selected`;
@@ -244,7 +267,7 @@ export default function ComparePage() {
                             <Command>
                                 <CommandEmpty>No documents found.</CommandEmpty>
                                 <CommandGroup>
-                                    {DOCUMENTS.map((doc) => (
+                                    {documents.map((doc) => (
                                         <CommandItem
                                             key={doc.id}
                                             onSelect={() => toggleDocument(doc.id)}
