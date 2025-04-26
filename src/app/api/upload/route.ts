@@ -46,15 +46,19 @@ export async function POST(req: NextRequest) {
         // Convert DOC to PDF if necessary
         const pdfBuffer = await convertToPdf(fileBuffer, file.name);
         
-        // If the file is not supported (not PDF, DOC, or DOCX)
-        if (fileExtension !== '.pdf' && fileExtension !== '.doc' && fileExtension !== '.docx') {
+        // If the file is not supported (not PDF, DOC, DOCX, or TXT)
+        if (fileExtension !== '.pdf' && 
+            fileExtension !== '.doc' && 
+            fileExtension !== '.docx' && 
+            fileExtension !== '.txt' && 
+            file.type !== 'text/plain') {
             return NextResponse.json(
                 { 
                     error: 'Unsupported file format',
                     details: {
                         fileName: file.name,
                         fileType: file.type,
-                        acceptedFormats: ['.pdf', '.doc', '.docx']
+                        acceptedFormats: ['.pdf', '.doc', '.docx', '.txt']
                     }
                 },
                 { status: 400 }
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // For PDF and DOCX files that don't need conversion
+        // For PDF, DOCX, and text files that don't need conversion
         console.log('File processed without conversion:', {
             originalName: file.name,
             originalType: file.type,
