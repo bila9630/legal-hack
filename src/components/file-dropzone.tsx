@@ -11,7 +11,20 @@ interface FileDropzoneProps {
     className?: string;
 }
 
-const FileDropzone: FC<FileDropzoneProps> = ({ files, setFiles, acceptedFileTypes, children, className }) => {
+const DEFAULT_ACCEPTED_TYPES: Accept = {
+    'application/pdf': ['.pdf'],
+    'application/msword': ['.doc'],
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    'text/plain': ['.txt']
+};
+
+const FileDropzone: FC<FileDropzoneProps> = ({ 
+    files, 
+    setFiles, 
+    acceptedFileTypes = DEFAULT_ACCEPTED_TYPES, 
+    children, 
+    className 
+}) => {
     const onDrop = (acceptedFiles: File[]) => {
         // Only take the first file
         const newFile = acceptedFiles[0];
