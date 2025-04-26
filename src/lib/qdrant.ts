@@ -1,5 +1,6 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { Document } from "@langchain/core/documents";
+import { v4 as uuidv4 } from 'uuid';
 
 interface DocumentWithEmbedding extends Document {
     embedding: number[];
@@ -17,8 +18,8 @@ export const qdrantClient = new QdrantClient({
 
 export async function storeEmbeddings(documents: DocumentWithEmbedding[]) {
     try {
-        const points = documents.map((doc, index) => ({
-            id: index,
+        const points = documents.map((doc) => ({
+            id: uuidv4(),
             vector: doc.embedding,
             payload: {
                 content: doc.pageContent,

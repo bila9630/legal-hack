@@ -68,17 +68,17 @@ export const UploadFileModal: FC<UploadFileModalProps> = ({ isOpen, onClose, onS
                 return;
             }
 
-            // // Trigger embedding creation in the background
-            // try {
-            //     await fetch('/api/pdf', {
-            //         method: 'POST',
-            //         headers: { 'Content-Type': 'application/json' },
-            //         body: JSON.stringify({ filePath: fileUrl }),
-            //     });
-            // } catch (embedErr) {
-            //     // Optionally log or ignore embedding errors
-            //     console.error('Embedding creation failed:', embedErr);
-            // }
+            // Trigger embedding creation in the background
+            try {
+                await fetch('/api/pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filePath: fileUrl }),
+                });
+            } catch (embedErr) {
+                // Optionally log or ignore embedding errors
+                console.error('Embedding creation failed:', embedErr);
+            }
 
             handleCancel();
             onSuccess?.();
