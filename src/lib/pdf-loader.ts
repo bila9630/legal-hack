@@ -5,6 +5,7 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { createEmbeddings } from './embeddings';
+import { storeEmbeddings } from './qdrant';
 
 export async function loadPdf(filePath: string) {
     console.log("Loading PDF from", filePath);
@@ -59,7 +60,10 @@ export async function loadPdf(filePath: string) {
     // Create embeddings for the chunked documents
     const docsWithEmbeddings = await createEmbeddings(chunkedDocs);
     console.log("Created embeddings for", docsWithEmbeddings.length, "chunks");
-    console.log(docsWithEmbeddings);
+
+    // Store embeddings in Qdrant
+    await storeEmbeddings(docsWithEmbeddings);
+    console.log("Stored embeddings in Qdrant");
 
     return docsWithEmbeddings;
 }
