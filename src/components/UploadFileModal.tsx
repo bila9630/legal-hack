@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Upload, X } from "lucide-react";
 import FileDropzone from "@/components/file-dropzone";
 import { pb } from '@/lib/pocketbase';
@@ -25,14 +24,12 @@ interface UploadFileModalProps {
 export const UploadFileModal: FC<UploadFileModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const [files, setFiles] = useState<File[]>([]);
     const [name, setName] = useState("");
-    const [summary, setSummary] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleCancel = () => {
         setFiles([]);
         setName("");
-        setSummary("");
         setError(null);
         setIsLoading(false);
         onClose();
@@ -51,27 +48,26 @@ export const UploadFileModal: FC<UploadFileModalProps> = ({ isOpen, onClose, onS
             const formData = new FormData();
             formData.append('file', file);
             formData.append('name', name || file.name.replace(/\.[^/.]+$/, ""));
-            formData.append('summary', summary);
             formData.append('type', 'nda');
             const record = await pb.collection('ndas').create(formData);
             const fileUrl = `https://hackathon24.pockethost.io/api/files/${record.collectionId}/${record.id}/${record.file}`;
             console.log('File URL:', fileUrl);
-            if (!summary) {
-                try {
-                    const response = await fetch('/api/create-summary', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ recordId: record.id, fileUrl }),
-                    });
-                    if (!response.ok) {
-                        throw new Error('Failed to create summary');
-                    }
-                } catch (apiErr) {
-                    setError('Failed to create summary.');
-                    setIsLoading(false);
-                    return;
+
+            try {
+                const response = await fetch('/api/create-summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recordId: record.id, fileUrl }),
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to create summary');
                 }
+            } catch (apiErr) {
+                setError('Failed to create summary.');
+                setIsLoading(false);
+                return;
             }
+
             handleCancel();
             onSuccess?.();
         } catch (err) {
@@ -118,15 +114,6 @@ export const UploadFileModal: FC<UploadFileModalProps> = ({ isOpen, onClose, onS
                             value={name}
                             onChange={e => setName(e.target.value)}
                             placeholder="Enter file name"
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="summary">Summary (Optional)</Label>
-                        <Textarea
-                            id="summary"
-                            value={summary}
-                            onChange={e => setSummary(e.target.value)}
-                            placeholder="Enter file summary"
                         />
                     </div>
                     {error && <div className="text-red-500 text-sm">{error}</div>}

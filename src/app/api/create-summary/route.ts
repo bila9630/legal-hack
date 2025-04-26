@@ -9,6 +9,12 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { pb } from '@/lib/pocketbase';
 
+const clauseSchema = z.object({
+    category: z.string(),
+    content: z.string(),
+    importance: z.enum(['high', 'medium', 'low'])
+});
+
 export async function POST(request: Request) {
     try {
         const { recordId, fileUrl } = await request.json();
@@ -35,9 +41,10 @@ export async function POST(request: Request) {
 
         const { object } = await generateObject({
             model: openai("gpt-4o-mini"),
-            system: "You are a helpful assistant that creates concise summaries of legal documents. Focus on key points, main arguments, and important details.",
+            system: "You are a helpful assistant that analyzes legal documents. Extract key clauses and categorize them. Focus on identifying termination conditions, liability provisions, confidentiality requirements, payment terms, intellectual property rights, and governance structures. For each clause, determine its importance level based on its impact and scope.",
             schema: z.object({
-                summary: z.string().describe("Please be precise and concise. Do not include any additional information."),
+                summary: z.string().describe("Provide a concise overview of the document's main purpose and key provisions."),
+                clauses: z.array(clauseSchema).describe("Extract and categorize key clauses from the document. For each clause, specify its category, content, and importance level.")
             }),
             messages: [
                 {
@@ -54,16 +61,30 @@ export async function POST(request: Request) {
         });
 
         console.log('Generated Summary:', object);
+        console.log('Clauses:', object.clauses);
 
-        // Update the record in PocketBase
-        const data = {
+        // Update the NDA record with summary
+        const ndaData = {
             summary: object.summary
         };
+        await pb.collection('ndas').update(recordId, ndaData);
 
-        const record = await pb.collection('ndas').update(recordId, data);
-        console.log('Updated record:', record);
+        // Store each clause in nda_clauses collection
+        for (const clause of object.clauses) {
+            const clauseData = {
+                nda_id: recordId,
+                content: clause.content,
+                category: clause.category,
+                importance: clause.importance
+            };
+            await pb.collection('nda_clauses').create(clauseData);
+        }
 
-        return NextResponse.json({ success: true, summary: object.summary });
+        return NextResponse.json({
+            success: true,
+            summary: object.summary,
+            clauses: object.clauses
+        });
     } catch (error) {
         console.error('Error creating summary:', error);
         return NextResponse.json(
