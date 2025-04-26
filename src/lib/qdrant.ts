@@ -11,6 +11,7 @@ const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
 export const qdrantClient = new QdrantClient({
     url: QDRANT_URL,
     apiKey: QDRANT_API_KEY,
+    timeout: 30000, // 30 seconds timeout
     checkCompatibility: false, // Skip version check
 });
 

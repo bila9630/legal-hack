@@ -50,8 +50,8 @@ export async function loadPdf(filePath: string) {
     }));
 
     const textSplitter = new RecursiveCharacterTextSplitter({
-        chunkSize: 1000,
-        chunkOverlap: 200,
+        chunkSize: 600,
+        chunkOverlap: 100,
     });
 
     const chunkedDocs = await textSplitter.splitDocuments(docsWithOriginalSource);
