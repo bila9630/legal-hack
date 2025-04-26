@@ -13,6 +13,7 @@ interface PdfViewerProps {
 
 export default function PdfViewer({ file, className }: PdfViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,13 +22,19 @@ export default function PdfViewer({ file, className }: PdfViewerProps) {
   const [scale, setScale] = useState(1.5);
   const [isRendering, setIsRendering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
+    return () => {
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current);
+      }
+    };
   }, []);
 
   const renderPage = useCallback(async (pdf: PDFDocumentProxy, pageNumber: number, pdfjsLib: any) => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !containerRef.current) return;
 
     try {
       setIsRendering(true);
@@ -37,24 +44,39 @@ export default function PdfViewer({ file, className }: PdfViewerProps) {
 
       if (!context) return;
 
+      // Get the container width
+      const containerWidth = containerRef.current.clientWidth;
       const viewport = page.getViewport({ scale });
       
-      // Calculate the maximum width based on the viewport width
-      const maxWidth = window.innerWidth * 0.9; // 90% of viewport width
-      const actualScale = scale * Math.min(1, maxWidth / viewport.width);
-      const scaledViewport = page.getViewport({ scale: actualScale });
+      // Calculate the scale to fit the container width while maintaining aspect ratio
+      const containerScale = containerWidth / viewport.width;
+      const finalScale = scale * containerScale;
+      const scaledViewport = page.getViewport({ scale: finalScale });
 
+      // Set canvas dimensions
       canvas.height = scaledViewport.height;
       canvas.width = scaledViewport.width;
+      canvas.style.width = '100%';
+      canvas.style.height = 'auto';
 
-      await page.render({
+      // Clear the canvas before rendering
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      const renderContext = {
         canvasContext: context,
         viewport: scaledViewport,
-      }).promise;
+      };
+
+      await page.render(renderContext).promise;
+
+      // Add a small delay after rendering to ensure everything is properly displayed
+      renderTimeoutRef.current = setTimeout(() => {
+        setIsRendering(false);
+      }, 100);
+
     } catch (error) {
       console.error('Error rendering page:', error);
       setError('Failed to render page. Please try again.');
-    } finally {
       setIsRendering(false);
     }
   }, [scale]);
@@ -69,15 +91,27 @@ export default function PdfViewer({ file, className }: PdfViewerProps) {
 
         const pdfjsLib = await import('pdfjs-dist');
         
+        // Ensure worker is loaded
         if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
           pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
         }
 
         const fileArrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: fileArrayBuffer }).promise;
+        const loadingTask = pdfjsLib.getDocument({ data: fileArrayBuffer });
+        
+        loadingTask.onProgress = (progress: { loaded: number; total: number }) => {
+          console.log(`Loading PDF: ${progress.loaded}/${progress.total}`);
+        };
+
+        const pdf = await loadingTask.promise;
         setPdfDoc(pdf);
         setTotalPages(pdf.numPages);
-        await renderPage(pdf, 1, pdfjsLib);
+        
+        // Wait a bit before initial render to ensure container is properly sized
+        setTimeout(() => {
+          renderPage(pdf, 1, pdfjsLib);
+        }, 100);
+
       } catch (error) {
         console.error('Error loading PDF:', error);
         setError('Failed to load PDF. Please ensure the file is valid and try again.');
@@ -88,6 +122,19 @@ export default function PdfViewer({ file, className }: PdfViewerProps) {
 
     loadPdf();
   }, [file, renderPage, isMounted]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (pdfDoc) {
+        import('pdfjs-dist').then(pdfjsLib => {
+          renderPage(pdfDoc, currentPage, pdfjsLib);
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [pdfDoc, currentPage, renderPage]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -205,7 +252,7 @@ export default function PdfViewer({ file, className }: PdfViewerProps) {
           </div>
         </div>
         
-        <div className="relative">
+        <div className="relative" ref={containerRef}>
           {isRendering && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

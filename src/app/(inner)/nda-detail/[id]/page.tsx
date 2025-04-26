@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+import DocumentViewer from '@/components/document-viewer';
 
 interface Clause {
     id: string;
@@ -18,6 +20,8 @@ interface NDA {
     name: string;
     summary: string;
     created: string;
+    file: string;
+    collectionId: string;
 }
 
 const importanceOptions = [
@@ -34,6 +38,7 @@ export default function NDADetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filterImportance, setFilterImportance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+    const [file, setFile] = useState<File | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -44,6 +49,15 @@ export default function NDADetailPage() {
                 // Fetch NDA details
                 const ndaRecord = await pb.collection('ndas').getOne(params.id as string) as NDA;
                 setNda(ndaRecord);
+
+                // Get the file if available
+                if (ndaRecord.file) {
+                    const url = pb.files.getUrl(ndaRecord, ndaRecord.file);
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const file = new File([blob], ndaRecord.file, { type: 'application/pdf' });
+                    setFile(file);
+                }
 
                 // Fetch clauses
                 const resultList = await pb.collection('nda_clauses').getList(1, 50, {
@@ -76,7 +90,11 @@ export default function NDADetailPage() {
     }
 
     if (isLoading) {
-        return <div className="p-4">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
     }
 
     if (error) {
@@ -150,9 +168,19 @@ export default function NDADetailPage() {
                         </CardContent>
                     </Card>
                 </div>
-                {/* Right: PDF placeholder */}
-                <div className="w-full md:w-1/2 min-h-[400px] bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-muted-foreground">PDF preview coming soon…</span>
+                {/* Right: PDF Viewer */}
+                <div className="w-full md:w-1/2">
+                    <Card className="h-full min-h-[600px]">
+                        <CardContent className="p-0 h-full">
+                            {file ? (
+                                <DocumentViewer file={file} className="w-full min-h-[600px]" />
+                            ) : (
+                                <div className="flex items-center justify-center h-full">
+                                    <span className="text-muted-foreground">No file available</span>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>
