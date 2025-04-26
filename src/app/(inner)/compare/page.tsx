@@ -86,15 +86,6 @@ export default function ComparePage() {
                 throw new Error('No valid input provided');
             }
 
-            // First store the file in sessionStorage
-            const arrayBuffer = await fileToProcess.arrayBuffer();
-            const fileData = {
-                name: fileToProcess.name,
-                type: fileToProcess.type,
-                data: Array.from(new Uint8Array(arrayBuffer))
-            };
-            sessionStorage.setItem('documentFile', JSON.stringify(fileData));
-
             // Then upload the file
             const formData = new FormData();
             formData.append('file', fileToProcess);
@@ -110,6 +101,35 @@ export default function ComparePage() {
 
             if (!response.ok) {
                 throw new Error(responseData.error || 'Upload failed');
+            }
+
+            // Handle converted file if present
+            if (responseData.convertedFile) {
+                const { data, type, name } = responseData.convertedFile;
+                const binaryData = atob(data);
+                const bytes = new Uint8Array(binaryData.length);
+                for (let i = 0; i < binaryData.length; i++) {
+                    bytes[i] = binaryData.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type });
+                const convertedFile = new File([blob], name, { type });
+                
+                // Store the converted file
+                const fileData = {
+                    name: convertedFile.name,
+                    type: convertedFile.type,
+                    data: Array.from(bytes)
+                };
+                sessionStorage.setItem('documentFile', JSON.stringify(fileData));
+            } else {
+                // Store the original file if no conversion was needed
+                const arrayBuffer = await fileToProcess.arrayBuffer();
+                const fileData = {
+                    name: fileToProcess.name,
+                    type: fileToProcess.type,
+                    data: Array.from(new Uint8Array(arrayBuffer))
+                };
+                sessionStorage.setItem('documentFile', JSON.stringify(fileData));
             }
 
             // If everything is successful, navigate to the view page
@@ -185,10 +205,10 @@ export default function ComparePage() {
                             >
                                 <div className="text-center">
                                     <p className="text-sm text-muted-foreground">
-                                        Drop your PDF file here or click to browse
+                                        Drop your document here or click to browse
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-2">
-                                        Supported format: PDF
+                                        Supported formats: PDF, DOC, DOCX
                                     </p>
                                 </div>
                             </FileDropzone>

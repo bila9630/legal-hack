@@ -19,21 +19,53 @@ export default function DocumentViewer({ file, className }: DocumentViewerProps)
         const loadDocument = async () => {
             setIsLoading(true);
             setError(null);
+            
+            const fileExtension = file.name.toLowerCase().split('.').pop();
+            const mimeType = file.type.toLowerCase();
+            
+            console.log('Loading document:', {
+                fileName: file.name,
+                fileType: file.type,
+                fileExtension,
+                mimeType
+            });
+
             try {
-                if (file.type === 'application/pdf') {
+                // Handle PDF files
+                if (mimeType === 'application/pdf' || fileExtension === 'pdf') {
                     setContent('');  // PDF will be handled by PdfViewer
-                } else if (
-                    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                    file.name.toLowerCase().endsWith('.docx')
+                } 
+                // Handle DOCX files
+                else if (
+                    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                    fileExtension === 'docx'
                 ) {
                     const arrayBuffer = await file.arrayBuffer();
                     const result = await mammoth.convertToHtml({ arrayBuffer });
                     setContent(result.value);
-                } else if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
+                }
+                // Handle DOC files
+                else if (
+                    mimeType === 'application/msword' ||
+                    mimeType === 'application/vnd.ms-word' ||
+                    mimeType === 'application/x-msword' ||
+                    fileExtension === 'doc'
+                ) {
+                    // For DOC files, we expect them to be converted to PDF by the server
+                    // The file we receive should already be in PDF format
+                    if (file instanceof Blob && file.type === 'application/pdf') {
+                        setContent(''); // Will be handled by PdfViewer
+                    } else {
+                        throw new Error('DOC file must be converted to PDF first');
+                    }
+                }
+                // Handle text files
+                else if (mimeType === 'text/plain' || fileExtension === 'txt') {
                     const text = await file.text();
                     setContent(`<pre style="white-space: pre-wrap;">${text}</pre>`);
-                } else {
-                    throw new Error('Unsupported file type');
+                } 
+                else {
+                    throw new Error(`Unsupported file type: ${mimeType} (${fileExtension})`);
                 }
             } catch (err) {
                 console.error('Error loading document:', err);
@@ -66,7 +98,7 @@ export default function DocumentViewer({ file, className }: DocumentViewerProps)
         );
     }
 
-    // For PDF files, use the PDF viewer
+    // For PDF files (including converted DOC files), use the PDF viewer
     if (file.type === 'application/pdf') {
         return <PdfViewer file={file} className={className} />;
     }

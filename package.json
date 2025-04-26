@@ -41,8 +41,10 @@
     "docx": "^9.4.1",
     "docx-preview": "^0.3.5",
     "docxtemplater": "^3.61.1",
+    "libreoffice-convert": "^1.6.1",
     "lucide-react": "^0.358.0",
     "mammoth": "^1.9.0",
+    "mime-types": "^3.0.1",
     "next": "^14.2.28",
     "next-themes": "^0.2.1",
     "pdfjs-dist": "^2.16.105",
@@ -59,6 +61,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/mime-types": "^2.1.4",
     "@types/node": "^20",
     "@types/pdfjs-dist": "^2.10.378",
     "@types/react": "^18",
