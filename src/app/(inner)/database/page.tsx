@@ -11,10 +11,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { useRouter } from 'next/navigation';
 
 export default function DatabasePage() {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [records, setRecords] = useState<any[]>([]);
+    const router = useRouter();
 
     const fetchRecords = async () => {
         const records = await pb.collection('ndas').getFullList({
@@ -26,6 +28,10 @@ export default function DatabasePage() {
     useEffect(() => {
         fetchRecords();
     }, []);
+
+    const handleRowClick = (record: any) => {
+        router.push(`/nda-detail/${record.id}`);
+    };
 
     return (
         <div className="w-full max-w-[95%] mx-auto px-2 sm:px-4 py-4">
@@ -52,7 +58,11 @@ export default function DatabasePage() {
                 </TableHeader>
                 <TableBody>
                     {records.map((record) => (
-                        <TableRow key={record.id}>
+                        <TableRow
+                            key={record.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => handleRowClick(record)}
+                        >
                             <TableCell>{record.name}</TableCell>
                             <TableCell>{record.type}</TableCell>
                             <TableCell className="max-w-md truncate">
@@ -67,6 +77,7 @@ export default function DatabasePage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-blue-600 hover:text-blue-800 hover:underline"
+                                    onClick={(e) => e.stopPropagation()}
                                 >
                                     View PDF
                                 </a>

@@ -48,7 +48,7 @@ export const UploadFileModal: FC<UploadFileModalProps> = ({ isOpen, onClose, onS
             const formData = new FormData();
             formData.append('file', file);
             formData.append('name', name || file.name.replace(/\.[^/.]+$/, ""));
-            formData.append('type', 'nda');
+            formData.append('type', 'NDA');
             const record = await pb.collection('ndas').create(formData);
             const fileUrl = `https://hackathon24.pockethost.io/api/files/${record.collectionId}/${record.id}/${record.file}`;
             console.log('File URL:', fileUrl);
