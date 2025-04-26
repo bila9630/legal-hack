@@ -1,6 +1,5 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import DocumentViewer from '@/components/document-viewer';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,6 @@ import Link from 'next/link';
 
 export default function ViewDocumentPage() {
     const [file, setFile] = useState<File | null>(null);
-    const searchParams = useSearchParams();
 
     useEffect(() => {
         // Get the file from sessionStorage when the component mounts
