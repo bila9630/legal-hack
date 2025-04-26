@@ -71,7 +71,10 @@ export default function ComparePage() {
         if ((!files.length && !freeText) || !selectedDocs.length) return;
         setIsLoading(true);
         try {
+            const file = files[0];
+            const fileName = file.name.replace(/\.[^/.]+$/, "");
             const formData = new FormData();
+<<<<<<< HEAD
             
             if (inputType === 'file' && files[0]) {
                 // Store the file in sessionStorage
@@ -104,6 +107,15 @@ export default function ComparePage() {
                 };
                 fileReader.readAsArrayBuffer(file);
             }
+=======
+            formData.append('file', file);
+            formData.append('type', 'nda');
+            formData.append('name', fileName);
+            const record = await pb.collection('ndas').create(formData);
+            const fileUrl = `https://hackathon24.pockethost.io/api/files/${record.collectionId}/${record.id}/${record.file}`;
+            console.log('File URL:', fileUrl);
+            // Optionally, show success or reset state here
+>>>>>>> a8d5a9fe53f4afe3b0fbc75e25104c29cb57e806
         } catch (error) {
             console.error('Upload failed:', error);
         } finally {

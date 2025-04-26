@@ -11,6 +11,9 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.3.19",
     "@hookform/resolvers": "^3.9.0",
+    "@langchain/community": "^0.3.41",
+    "@langchain/core": "^0.3.49",
+    "@qdrant/js-client-rest": "^1.14.0",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.4",
@@ -34,15 +37,23 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+<<<<<<< HEAD
     "docx": "^9.4.1",
     "docx-preview": "^0.3.5",
     "docxtemplater": "^3.61.1",
+=======
+    "langchain": "^0.3.24",
+>>>>>>> a8d5a9fe53f4afe3b0fbc75e25104c29cb57e806
     "lucide-react": "^0.453.0",
     "mammoth": "^1.9.0",
     "next": "^14.2.15",
     "next-themes": "^0.3.0",
+<<<<<<< HEAD
     "pdfjs-dist": "^3.11.174",
     "pizzip": "^3.1.8",
+=======
+    "pdf-parse": "^1.1.1",
+>>>>>>> a8d5a9fe53f4afe3b0fbc75e25104c29cb57e806
     "pocketbase": "^0.22.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
