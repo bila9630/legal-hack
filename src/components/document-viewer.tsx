@@ -1,247 +1,150 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import mammoth from 'mammoth';
 import PdfViewer from './pdf-viewer';
-import dynamic from 'next/dynamic';
-import Docxtemplater from 'docxtemplater';
-import PizZip from 'pizzip';
+import { cn } from '@/lib/utils';
 
 interface DocumentViewerProps {
-    file: File | null;
-    text?: string;
+    file: File;
     className?: string;
 }
 
-// Create a client-side only component for DOCX rendering
-const DocxRenderer = dynamic(() => Promise.resolve(({ file }: { file: File }) => {
-    const [htmlContent, setHtmlContent] = useState<string>('');
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const renderDocument = async () => {
-            if (!file) return;
-
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const zip = new PizZip(arrayBuffer);
-                const doc = new Docxtemplater(zip, {
-                    paragraphLoop: true,
-                    linebreaks: true,
-                });
-
-                // Load the document content
-                doc.render();
-                
-                // Get the document as a string
-                const content = doc.getZip().files['word/document.xml'].asText();
-                
-                // Basic XML to HTML conversion
-                const htmlString = content
-                    .replace(/<w:p[^>]*>/g, '<p>') // Convert paragraphs
-                    .replace(/<\/w:p>/g, '</p>')
-                    .replace(/<w:r[^>]*>/g, '<span>') // Convert runs
-                    .replace(/<\/w:r>/g, '</span>')
-                    .replace(/<w:t[^>]*>/g, '') // Remove text wrapper tags
-                    .replace(/<\/w:t>/g, '')
-                    .replace(/<[^>]+>/g, '') // Remove any remaining XML tags
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>')
-                    .replace(/&amp;/g, '&')
-                    .split('\n')
-                    .filter(line => line.trim() !== '')
-                    .map(line => `<p>${line}</p>`)
-                    .join('\n');
-
-                setHtmlContent(htmlString);
-                
-            } catch (error) {
-                console.error('Error processing DOCX:', error);
-                setError('Error processing document. Please try a different file format.');
-            }
-        };
-
-        renderDocument();
-    }, [file]);
-
-    if (error) {
-        return (
-            <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-                <p className="font-medium">{error}</p>
-                <p className="text-sm mt-2">Try converting the document to PDF format first.</p>
-            </div>
-        );
-    }
-
-    return (
-        <div className="w-full h-full min-h-[500px] bg-white rounded-lg shadow-sm p-6 overflow-auto">
-            <div 
-                className="docx-content prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: htmlContent }}
-            />
-        </div>
-    );
-}), { ssr: false });
-
-export default function DocumentViewer({ file, text, className }: DocumentViewerProps) {
+export default function DocumentViewer({ file, className }: DocumentViewerProps) {
     const [content, setContent] = useState<string>('');
-    const [fileType, setFileType] = useState<'pdf' | 'docx' | 'text' | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [docxFile, setDocxFile] = useState<ArrayBuffer | null>(null);
-    const docxContainerRef = useRef<HTMLDivElement>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Handle file type detection and initial processing
     useEffect(() => {
-        if (text) {
-            setContent(text);
-            setFileType('text');
-            setDocxFile(null);
-            return;
-        }
-
-        if (!file) {
-            setDocxFile(null);
-            return;
-        }
-
-        const processFile = async () => {
+        const loadDocument = async () => {
             setIsLoading(true);
             setError(null);
-
             try {
-                console.log('Processing file:', {
-                    name: file.name,
-                    type: file.type,
-                    size: file.size
-                });
-
                 if (file.type === 'application/pdf') {
-                    setFileType('pdf');
-                    setDocxFile(null);
+                    setContent('');  // PDF will be handled by PdfViewer
                 } else if (
                     file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                    file.type === 'application/msword'
+                    file.name.toLowerCase().endsWith('.docx')
                 ) {
-                    console.log('DOCX file detected');
-                    setFileType('docx');
-                    setDocxFile(null);
-                } else if (file.type === 'text/plain') {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.convertToHtml({ arrayBuffer });
+                    setContent(result.value);
+                } else if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
                     const text = await file.text();
-                    setContent(text);
-                    setFileType('text');
-                    setDocxFile(null);
+                    setContent(`<pre style="white-space: pre-wrap;">${text}</pre>`);
                 } else {
-                    throw new Error(`Unsupported file type: ${file.type}`);
+                    throw new Error('Unsupported file type');
                 }
             } catch (err) {
-                console.error('Document processing error:', err);
-                setError(err instanceof Error ? err.message : 'Unknown error processing document');
+                console.error('Error loading document:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load document');
             } finally {
                 setIsLoading(false);
             }
         };
 
-        processFile();
-    }, [file, text]);
-
-    // Handle DOCX rendering
-    useEffect(() => {
-        if (!docxFile || !docxContainerRef.current || fileType !== 'docx') {
-            return;
+        if (file) {
+            loadDocument();
         }
-
-        const renderDocument = async () => {
-            const container = docxContainerRef.current;
-            if (!container) return;
-
-            try {
-                container.innerHTML = '';
-                console.log('Starting DOCX render with docxtemplater');
-                
-                const zip = new PizZip(docxFile);
-                const doc = new Docxtemplater(zip, {
-                    paragraphLoop: true,
-                    linebreaks: true,
-                });
-
-                // Load the document content
-                doc.render();
-                
-                // Get the document as a string
-                const content = doc.getZip().files['word/document.xml'].asText();
-                
-                // Basic XML to HTML conversion
-                const htmlString = content
-                    .replace(/<w:p[^>]*>/g, '<p>') // Convert paragraphs
-                    .replace(/<\/w:p>/g, '</p>')
-                    .replace(/<w:r[^>]*>/g, '<span>') // Convert runs
-                    .replace(/<\/w:r>/g, '</span>')
-                    .replace(/<w:t[^>]*>/g, '') // Remove text wrapper tags
-                    .replace(/<\/w:t>/g, '')
-                    .replace(/<[^>]+>/g, '') // Remove any remaining XML tags
-                    .replace(/&lt;/g, '<')
-                    .replace(/&gt;/g, '>')
-                    .replace(/&amp;/g, '&')
-                    .split('\n')
-                    .filter(line => line.trim() !== '')
-                    .map(line => `<p>${line}</p>`)
-                    .join('\n');
-
-                container.innerHTML = `
-                    <div class="docx-content prose prose-sm max-w-none">
-                        ${htmlString}
-                    </div>
-                `;
-                
-                console.log('DOCX render completed');
-            } catch (err) {
-                console.error('DOCX rendering error:', err);
-                setError('Error processing document. Please try a different file format.');
-            }
-        };
-
-        renderDocument();
-
-        return () => {
-            if (docxContainerRef.current) {
-                docxContainerRef.current.innerHTML = '';
-            }
-        };
-    }, [docxFile, fileType]);
-
-    if (!file && !text) {
-        return <div className="text-center p-4">No content to display</div>;
-    }
+    }, [file]);
 
     if (error) {
         return (
-            <div className="text-center p-4 text-red-500">
-                {error}
+            <div className="flex items-center justify-center h-full">
+                <div className="text-destructive bg-destructive/10 p-4 rounded-lg border border-destructive">
+                    {error}
+                </div>
             </div>
         );
     }
 
     if (isLoading) {
         return (
-            <div className="text-center p-4">
-                Loading document...
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-pulse text-muted-foreground">Loading document...</div>
             </div>
         );
     }
 
-    if (fileType === 'pdf' && file) {
+    // For PDF files, use the PDF viewer
+    if (file.type === 'application/pdf') {
         return <PdfViewer file={file} className={className} />;
     }
 
-    if (fileType === 'docx' && file) {
-        return <DocxRenderer file={file} />;
-    }
-
+    // For DOCX and other document types, render the HTML content
     return (
-        <div className={`bg-white text-black rounded-lg overflow-auto ${className}`}>
-            <div className="p-8 whitespace-pre-wrap font-mono text-sm">
-                {content}
-            </div>
+        <div className={cn("document-viewer", className)}>
+            <style jsx global>{`
+                .document-viewer {
+                    padding: 2rem;
+                    background: white;
+                    color: black;
+                    overflow-y: auto;
+                }
+                .document-viewer h1 {
+                    font-size: 2em;
+                    margin: 0.67em 0;
+                    font-weight: bold;
+                }
+                .document-viewer h2 {
+                    font-size: 1.5em;
+                    margin: 0.83em 0;
+                    font-weight: bold;
+                }
+                .document-viewer h3 {
+                    font-size: 1.17em;
+                    margin: 1em 0;
+                    font-weight: bold;
+                }
+                .document-viewer p {
+                    margin: 1em 0;
+                    line-height: 1.5;
+                }
+                .document-viewer ul, .document-viewer ol {
+                    margin: 1em 0;
+                    padding-left: 40px;
+                }
+                .document-viewer ul {
+                    list-style-type: disc;
+                }
+                .document-viewer ol {
+                    list-style-type: decimal;
+                }
+                .document-viewer table {
+                    border-collapse: collapse;
+                    margin: 1em 0;
+                    width: 100%;
+                }
+                .document-viewer th, .document-viewer td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                }
+                .document-viewer th {
+                    background-color: #f5f5f5;
+                }
+                .document-viewer img {
+                    max-width: 100%;
+                    height: auto;
+                }
+                .document-viewer strong, .document-viewer b {
+                    font-weight: bold;
+                }
+                .document-viewer em, .document-viewer i {
+                    font-style: italic;
+                }
+                .document-viewer pre {
+                    font-family: monospace;
+                    background-color: #f5f5f5;
+                    padding: 1em;
+                    border-radius: 4px;
+                    overflow-x: auto;
+                }
+            `}</style>
+            <div 
+                className="prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none"
+                dangerouslySetInnerHTML={{ __html: content }} 
+            />
         </div>
     );
 } 
