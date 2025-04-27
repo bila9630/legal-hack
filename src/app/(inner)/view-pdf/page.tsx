@@ -8,12 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import DocumentViewer from '@/components/document-viewer';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from '@/components/ui/button';
 
 interface Clause {
     id: string;
     content: string;
     category: string;
     classification?: 'fulfilled' | 'require_change' | 'law_department';
+    explanation?: string;
     similarClause?: {
         content: string;
         source: string;
@@ -38,6 +46,8 @@ export default function ViewPDFPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
+    const [filterClassification, setFilterClassification] = useState<string | null>(null);
+    const [selectedSource, setSelectedSource] = useState<{ url: string; content: string } | null>(null);
 
     useEffect(() => {
         if (!recordId) {
@@ -124,6 +134,21 @@ export default function ViewPDFPage() {
         return () => { isMounted = false; };
     }, [fileUrl, nda]);
 
+    // Fetch source file when selected
+    useEffect(() => {
+        if (!selectedSource?.url) return;
+        let isMounted = true;
+        fetch(selectedSource.url)
+            .then(res => res.blob())
+            .then(blob => {
+                if (!isMounted) return;
+                const fileObj = new File([blob], 'source.pdf', { type: blob.type });
+                setFile(fileObj);
+            })
+            .catch(() => setFile(null));
+        return () => { isMounted = false; };
+    }, [selectedSource]);
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -174,46 +199,109 @@ export default function ViewPDFPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Clauses</CardTitle>
+                            <div className="flex gap-2 mt-2">
+                                <Button
+                                    variant={!filterClassification ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setFilterClassification(null)}
+                                >
+                                    All
+                                </Button>
+                                <Button
+                                    variant={filterClassification === 'fulfilled' ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setFilterClassification('fulfilled')}
+                                >
+                                    Fulfilled
+                                </Button>
+                                <Button
+                                    variant={filterClassification === 'require_change' ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setFilterClassification('require_change')}
+                                >
+                                    Require Change
+                                </Button>
+                                <Button
+                                    variant={filterClassification === 'law_department' ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setFilterClassification('law_department')}
+                                >
+                                    Law Department
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             {clauses.length === 0 ? (
                                 <div className="text-center text-muted-foreground py-4">No clauses found</div>
                             ) : (
                                 <div className="space-y-6">
-                                    {clauses.map((clause) => (
-                                        <div key={clause.id} className="border rounded-lg p-4">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Badge variant="outline">{clause.category}</Badge>
-                                                {clause.classification && (
-                                                    <Badge variant={
-                                                        clause.classification === 'fulfilled' ? 'secondary' :
-                                                            clause.classification === 'require_change' ? 'destructive' :
-                                                                'default'
-                                                    }>
-                                                        {clause.classification}
-                                                    </Badge>
+                                    {clauses
+                                        .filter(clause => !filterClassification || clause.classification === filterClassification)
+                                        .map((clause) => (
+                                            <div key={clause.id} className="border rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Badge variant="outline">{clause.category}</Badge>
+                                                    {clause.classification && (
+                                                        <Badge variant={
+                                                            clause.classification === 'fulfilled' ? 'secondary' :
+                                                                clause.classification === 'require_change' ? 'destructive' :
+                                                                    'default'
+                                                        }>
+                                                            {clause.classification}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-muted-foreground mb-4">{clause.content}</p>
+
+                                                {clause.explanation && (
+                                                    <div className="mb-4 p-3 bg-muted rounded-md">
+                                                        <h4 className="text-sm font-medium mb-2">Explanation</h4>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {clause.explanation}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {clause.similarClause && (
+                                                    <div className="mt-4 pt-4 border-t">
+                                                        <Accordion type="single" collapsible>
+                                                            <AccordionItem value="source" className="border-none">
+                                                                <AccordionTrigger className="py-0 hover:no-underline">
+                                                                    <span className="text-sm">
+                                                                        Source
+                                                                    </span>
+                                                                </AccordionTrigger>
+                                                                <AccordionContent>
+                                                                    <div className="pt-2">
+                                                                        <div className="flex items-center justify-start mb-2">
+                                                                            <span className="text-sm font-medium">
+                                                                                Score: {(clause.similarClause.score * 100).toFixed(1)}%
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-sm text-muted-foreground mb-2">
+                                                                            {clause.similarClause.content}
+                                                                        </p>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                if (clause.similarClause?.source) {
+                                                                                    setSelectedSource({
+                                                                                        url: clause.similarClause.source,
+                                                                                        content: clause.similarClause.content
+                                                                                    });
+                                                                                }
+                                                                            }}
+                                                                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                                                        >
+                                                                            Source
+                                                                        </button>
+                                                                    </div>
+                                                                </AccordionContent>
+                                                            </AccordionItem>
+                                                        </Accordion>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <p className="text-muted-foreground mb-4">{clause.content}</p>
-
-                                            {clause.similarClause && (
-                                                <div className="mt-4 pt-4 border-t">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-sm font-medium">Similar Clause</span>
-                                                        <span className="text-sm text-muted-foreground">
-                                                            Score: {(clause.similarClause.score * 100).toFixed(1)}%
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm text-muted-foreground mb-2">
-                                                        {clause.similarClause.content}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Source: {clause.similarClause.source}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                        ))}
                                 </div>
                             )}
                         </CardContent>
