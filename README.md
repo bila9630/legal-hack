@@ -14,6 +14,7 @@ The application follows a two-phase process:
    - OpenAI extracts clauses and generates embeddings
    - Clauses are stored in PocketBase
    - Embeddings are stored in Qdrant for future reference
+     
 ![upload](https://github.com/user-attachments/assets/4df6e09f-31b1-4f07-92c3-d75358990716)
 
 2. **Analysis & Recommendations (Compare Contracts)**
@@ -21,6 +22,7 @@ The application follows a two-phase process:
    - Similar clauses are searched in the vector database
    - OpenAI analyzes differences and generates recommendations
    - User receives classified clauses with actionable insights
+     
 ![retrieval](https://github.com/user-attachments/assets/8ba83744-b117-4c1d-ba20-308fd31123b9)
 
 ## Features
@@ -34,7 +36,7 @@ The application follows a two-phase process:
 
 ## Tech Stack
 
-### Frontendhttps://legal-hack.vercel.app/compareV
+### Frontend
 - Next.js
 - Shadcn UI
 - Tailwind CSS
