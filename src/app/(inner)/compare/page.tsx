@@ -197,13 +197,20 @@ export default function ComparePage() {
     };
 
     const getButtonText = () => {
-        if (selectedDocs.length === 0) {
+        // Exclude the 'all' pseudo-id from the count
+        const realSelectedDocs = selectedDocs.filter(id => id !== "all");
+
+        if (realSelectedDocs.length === 0) {
+            // If only 'all' is selected, treat as 'Compare to All'
+            if (selectedDocs.includes("all")) {
+                return "Compare to All";
+            }
             return "Select documents to compare";
-        } else if (selectedDocs.length === 1) {
-            const selectedDoc = documents.find(doc => doc.id === selectedDocs[0]);
+        } else if (realSelectedDocs.length === 1) {
+            const selectedDoc = documents.find(doc => doc.id === realSelectedDocs[0]);
             return `Compare to ${selectedDoc?.label || ''}`;
         } else {
-            return `${selectedDocs.length} documents selected`;
+            return `${realSelectedDocs.length} documents selected`;
         }
     };
 
