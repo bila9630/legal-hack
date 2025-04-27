@@ -53,44 +53,43 @@ The application follows a two-phase process:
 - npm, yarn, or pnpm
 - OpenAI API Key
 - Qdrant Cloud Account
+- PocketBase Instance
 
-## Environment Variables
+## Setup
 
-Create a `.env.local` file in the root directory with the following variables:
+1. **Qdrant Cloud Setup**
+   - Create a free account at [Qdrant Cloud](https://cloud.qdrant.io)
+   - Create a new cluster
+   - Get your API key and host URL
 
-```bash
-OPENAI_API_KEY=your_openai_api_key
-QDRANT_HOST=your_qdrant_host
-QDRANT_API_KEY=your_qdrant_api_key
-```
+2. **PocketBase Setup**
+   - Option 1: Self-hosted
+     - Download PocketBase from [pocketbase.io](https://pocketbase.io)
+     - Run the executable
+   - Option 2: Hosted (Recommended)
+     - Use [Pockethost.io](https://pockethost.io) for a managed PocketBase instance
+     - Get your PocketBase URL and admin credentials
 
-## Getting Started
+3. **Environment Variables**
+   Create a `.env.local` file in the root directory with the following variables:
+   ```bash
+   OPENAI_API_KEY=your_openai_api_key
+   QDRANT_HOST=your_qdrant_host
+   QDRANT_API_KEY=your_qdrant_api_key
+   POCKETBASE_URL=your_pocketbase_url
+   ```
 
-1. Clone the repository:
-```bash
-git clone [repository-url]
-cd [repository-name]
-```
+4. **Installation**
+   ```bash
+   git clone [repository-url]
+   cd [repository-name]
+   npm install
+   ```
 
-2. Install dependencies:
-```bash
-npm install
-# or
-yarn install
-# or
-pnpm install
-```
-
-3. Set up environment variables as described above
-
-4. Run the development server:
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+5. **Run Development Server**
+   ```bash
+   npm run dev
+   ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
