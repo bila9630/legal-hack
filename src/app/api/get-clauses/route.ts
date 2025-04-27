@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
 import { pb } from '@/lib/pocketbase';
 
 const clauseSchema = z.object({
@@ -27,14 +24,8 @@ export async function POST(request: Request) {
         // Destructure fileData
         const { name, type, data } = fileData;
 
-        // Create a temporary file
-        const tempDir = tmpdir();
-        const fileName = `temp_${Date.now()}.${type.split('/')[1]}`;
-        const localFilePath = join(tempDir, fileName);
-
-        // Convert data array back to Buffer and write to file
+        // Convert data array to Buffer
         const buffer = Buffer.from(data);
-        await writeFile(localFilePath, buffer);
 
         const { object } = await generateObject({
             model: openai("gpt-4o-mini"),
@@ -56,7 +47,6 @@ export async function POST(request: Request) {
                 }
             ]
         });
-
 
         // Store result in PocketBase
         const formData = new FormData();

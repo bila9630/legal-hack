@@ -1,12 +1,8 @@
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
-import { readFileSync } from 'fs';
-import { writeFile } from 'fs/promises';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import axios from 'axios';
-import { join } from 'path';
-import { tmpdir } from 'os';
 import { pb } from '@/lib/pocketbase';
 
 const clauseSchema = z.object({
@@ -31,13 +27,8 @@ export async function POST(request: Request) {
             responseType: 'arraybuffer'
         });
 
-        // Create a temporary file
-        const tempDir = tmpdir();
-        const fileName = `temp_${Date.now()}.pdf`;
-        const localFilePath = join(tempDir, fileName);
-
-        // Write the PDF to the temporary file
-        await writeFile(localFilePath, response.data);
+        // Get the buffer directly from the response
+        const buffer = Buffer.from(response.data);
 
         const { object } = await generateObject({
             model: openai("gpt-4o-mini"),
@@ -52,7 +43,7 @@ export async function POST(request: Request) {
                     content: [
                         {
                             type: "file",
-                            data: readFileSync(localFilePath),
+                            data: buffer,
                             mimeType: "application/pdf"
                         }
                     ]

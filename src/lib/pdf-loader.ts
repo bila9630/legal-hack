@@ -1,41 +1,46 @@
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import axios from 'axios';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
 import { createEmbeddings } from './embeddings';
 import { storeEmbeddings } from './qdrant';
 
 export async function loadPdf(filePath: string) {
     console.log("Loading PDF from", filePath);
 
-    let localFilePath = filePath;
+    let buffer: Buffer;
     const originalSource = filePath;
 
-    // If the path is a URL, download it first
+    // If the path is a URL, download it
     if (filePath.startsWith('http')) {
         try {
             const response = await axios.get(filePath, {
                 responseType: 'arraybuffer'
             });
-
-            // Create a temporary file
-            const tempDir = tmpdir();
-            const fileName = `temp_${Date.now()}.pdf`;
-            localFilePath = join(tempDir, fileName);
-
-            // Write the PDF to the temporary file
-            await writeFile(localFilePath, response.data);
-            console.log("PDF downloaded to", localFilePath);
+            buffer = Buffer.from(response.data);
+            console.log("PDF downloaded, size:", buffer.length);
         } catch (error) {
             console.error("Error downloading PDF:", error);
             throw new Error("Failed to download PDF from URL");
         }
+    } else {
+        // For local files, read directly into buffer
+        try {
+            const response = await axios.get(filePath, {
+                responseType: 'arraybuffer'
+            });
+            buffer = Buffer.from(response.data);
+            console.log("PDF loaded, size:", buffer.length);
+        } catch (error) {
+            console.error("Error loading PDF:", error);
+            throw new Error("Failed to load PDF");
+        }
     }
 
-    // Load the PDF
-    const loader = new PDFLoader(localFilePath);
+    // Convert buffer to Blob for PDFLoader
+    const blob = new Blob([buffer], { type: 'application/pdf' });
+
+    // Load the PDF from blob
+    const loader = new PDFLoader(blob);
     const docs = await loader.load();
     console.log("Loaded", docs.length, "documents");
 
@@ -55,9 +60,9 @@ export async function loadPdf(filePath: string) {
     });
 
     const chunkedDocs = await textSplitter.splitDocuments(docsWithOriginalSource);
-    console.log("Created", chunkedDocs.length, "chunks");
+    console.log("Split into", chunkedDocs.length, "chunks");
 
-    // Create embeddings for the chunked documents
+    // Create embeddings for the chunks
     const docsWithEmbeddings = await createEmbeddings(chunkedDocs);
     console.log("Created embeddings for", docsWithEmbeddings.length, "chunks");
 
