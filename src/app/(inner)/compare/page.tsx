@@ -29,6 +29,7 @@ export default function ComparePage() {
     const [files, setFiles] = useState<File[]>([]);
     const [freeText, setFreeText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [processingStep, setProcessingStep] = useState<string>('');
     const [open, setOpen] = useState(false);
     const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
     const [inputType, setInputType] = useState<'file' | 'text'>('file');
@@ -109,7 +110,9 @@ export default function ComparePage() {
                 throw new Error('No valid input provided');
             }
 
-            // Then upload the file
+            // Step 1: Uploading file
+            setProcessingStep('Uploading file...');
+
             const formData = new FormData();
             formData.append('file', fileToProcess);
             formData.append('type', 'nda');
@@ -125,6 +128,9 @@ export default function ComparePage() {
             if (!response.ok) {
                 throw new Error(responseData.error || 'Upload failed');
             }
+
+            // Step 2: Converting file (if needed)
+            setProcessingStep('Converting file...');
 
             // Handle converted file if present
             if (responseData.convertedFile) {
@@ -143,6 +149,9 @@ export default function ComparePage() {
                     data: Array.from(bytes)
                 };
 
+                // Step 3: Processing clauses
+                setProcessingStep('Processing clauses...');
+
                 // Send file data to get-clauses endpoint
                 const clausesResponse = await fetch('/api/get-clauses', {
                     method: 'POST',
@@ -159,6 +168,7 @@ export default function ComparePage() {
 
                 const clausesData = await clausesResponse.json();
                 if (!clausesData.recordId) throw new Error('No recordId returned');
+
                 router.push(`/view-pdf?recordId=${clausesData.recordId}`);
                 return;
             } else {
@@ -169,6 +179,9 @@ export default function ComparePage() {
                     data: Array.from(new Uint8Array(arrayBuffer))
                 };
 
+                // Step 3: Processing clauses
+                setProcessingStep('Processing clauses...');
+
                 // Send file data to get-clauses endpoint
                 const clausesResponse = await fetch('/api/get-clauses', {
                     method: 'POST',
@@ -185,6 +198,7 @@ export default function ComparePage() {
 
                 const clausesData = await clausesResponse.json();
                 if (!clausesData.recordId) throw new Error('No recordId returned');
+
                 router.push(`/view-pdf?recordId=${clausesData.recordId}`);
                 return;
             }
@@ -193,6 +207,7 @@ export default function ComparePage() {
             setError(error instanceof Error ? error.message : 'Failed to process file');
         } finally {
             setIsLoading(false);
+            setProcessingStep('');
         }
     };
 
@@ -330,7 +345,7 @@ export default function ComparePage() {
                         {isLoading ? (
                             <>
                                 <span className="animate-spin mr-2">⏳</span>
-                                Processing...
+                                {processingStep}
                             </>
                         ) : (
                             "Compare Documents"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { pb } from '@/lib/pocketbase';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from '@/components/ui/button';
+import Loading from './loading';
 
 interface Clause {
     id: string;
@@ -37,7 +38,7 @@ interface TempNDA {
     file: string;
 }
 
-export default function ViewPDFPage() {
+function ViewPDFContent() {
     const searchParams = useSearchParams();
     const recordId = searchParams.get('recordId');
 
@@ -193,7 +194,7 @@ export default function ViewPDFPage() {
             </Card>
 
             {/* Main content area with two columns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left: Clauses */}
                 <div>
                     <Card>
@@ -309,7 +310,7 @@ export default function ViewPDFPage() {
                 </div>
 
                 {/* Right: Document Viewer */}
-                <div className="flex flex-col">
+                <div>
                     {file ? (
                         <div className="w-full h-full min-h-[600px]">
                             <DocumentViewer file={file} className="w-full h-full min-h-[600px]" />
@@ -320,5 +321,13 @@ export default function ViewPDFPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function ViewPDFPage() {
+    return (
+        <Suspense fallback={<Loading />}>
+            <ViewPDFContent />
+        </Suspense>
     );
 } 
