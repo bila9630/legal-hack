@@ -1,24 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-a
+# Contract Analysis Tool
+
+🌐 **Live Application**: [https://legal-hack.vercel.app/compare](https://legal-hack.vercel.app/compare)
+
+A powerful AI-powered tool for analyzing and comparing legal contracts. This application helps users without legal expertise make informed decisions by identifying key clauses, potential conflicts, and risks in contracts.
+
+## Process Flow
+
+The application follows a two-phase process:
+
+1. **Initial Processing (Upload Contract)**
+   - Contract is uploaded and stored in PocketBase
+   - Document is processed by LangChain
+   - OpenAI extracts clauses and generates embeddings
+   - Clauses are stored in PocketBase
+   - Embeddings are stored in Qdrant for future reference
+
+2. **Analysis & Recommendations (Compare Contracts)**
+   - Core clauses are extracted from the new contract
+   - Similar clauses are searched in the vector database
+   - OpenAI analyzes differences and generates recommendations
+   - User receives classified clauses with actionable insights
+
+
+## Features
+
+- 🔍 Compare new contracts with existing ones
+- 📑 Extract and classify contract clauses
+- 🤖 AI-powered analysis and recommendations
+- 📊 Actionable insights for decision making
+- 🔒 Secure document handling
+- 📄 Supports PDF and DOC/DOCX file formats
+
+## Tech Stack
+
+### Frontendhttps://legal-hack.vercel.app/compareV
+- Next.js
+- Shadcn UI
+- Tailwind CSS
+
+### Backend
+- PocketBase (Backend as a Service)
+- LangChain (PDF Processing)
+- OpenAI (Embeddings)
+- Qdrant (Vector Database)
+
+## Prerequisites
+
+- Node.js (Latest LTS version recommended)
+- npm, yarn, or pnpm
+- OpenAI API Key
+- Qdrant Cloud Account
+
+## Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key
+QDRANT_HOST=your_qdrant_host
+QDRANT_API_KEY=your_qdrant_api_key
+```
+
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository:
+```bash
+git clone [repository-url]
+cd [repository-name]
+```
 
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+3. Set up environment variables as described above
+
+4. Run the development server:
 ```bash
 npm run dev
 # or
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application is configured for deployment on Vercel. CI/CD is handled automatically through Vercel's platform.
+
+## Usage
+
+1. Upload your new contract document
+2. The system will automatically:
+   - Extract and classify clauses
+   - Compare with existing contracts
+   - Generate recommendations
+3. Review the analysis and recommendations
+4. Make informed decisions based on the provided insights
 
 ## Learn More
 
@@ -28,16 +113,3 @@ To learn more about Next.js, take a look at the following resources:
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Notes
-- UserNav component is unused and can be removed
-- user/auto and user/test are test pages
-- Auslagern formatTotalDuration into lib because it is used in multiple places (result and result-detail)
-
-comment to trigger vercel deploy

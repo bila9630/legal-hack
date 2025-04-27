@@ -16,7 +16,6 @@ export function MainNav({
     const navItems = [
         { href: "/compare", label: "Compare" },
         { href: "/database", label: "Database" },
-        { href: "/categories", label: "Categories" },
     ]
 
     return (
